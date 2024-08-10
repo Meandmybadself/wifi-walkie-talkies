@@ -11,20 +11,21 @@ const char* password = "wireless";
 // WebSocket server details
 const char* wsHost = "192.168.1.151";
 const int wsPort = 8080;
+const int BUTTON_PIN = 38;  // Using GPIO38 for the on-board button
+const i2s_port_t i2s_num = I2S_NUM_0;
 
 // Audio configuration
-#define SAMPLE_RATE 16000
+#define SAMPLE_RATE 44100
 #define SAMPLE_BITS 16
 #define CHANNELS 1
 #define I2S_PORT I2S_NUM_0
 
-// I2S configuration for Adafruit Feather ESP32 V2 with I2S Microphone
-#define I2S_BCLK_PIN 14    // Bit clock
-#define I2S_LRCLK_PIN 15   // Left/Right clock (Word Select)
-#define I2S_DATA_IN_PIN 32  // Data in (from microphone)
+// Update these pin definitions
+#define I2S_BCLK_PIN 32  // Bit clock (SCK)
+#define I2S_LRCLK_PIN 27 // Left/Right clock (WS)
+#define I2S_DATA_IN_PIN 33 // Data in (SD)
 
 // Button configuration
-const int BUTTON_PIN = 38;  // Using GPIO38 for the on-board button
 volatile bool buttonPressed = false;
 
 WebSocketsClient webSocket;
@@ -36,6 +37,10 @@ void IRAM_ATTR buttonISR() {
 }
 
 void setup() {
+  // From https://github.com/atomic14/esp32-i2s-mic-test/issues/3
+  // REG_SET_BIT(I2S_TIMING_REG(i2s_num), BIT(9));
+  // REG_SET_BIT(I2S_CONF_REG(i2s_num), I2S_RX_MSB_SHIFT);
+
   Serial.begin(115200);
   delay(1000); // Give some time for Serial to initialize
   Serial.println("Starting setup...");
@@ -112,6 +117,30 @@ void setupI2S() {
   Serial.println("Starting I2S setup...");
 
   Serial.println("Configuring I2S...");
+  // i2s_config_t i2s_config = {
+  //   .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX),
+  //   .sample_rate = SAMPLE_RATE,
+  //   .bits_per_sample = I2S_BITS_PER_SAMPLE_32BIT,
+  //   .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
+  //   .communication_format = I2S_COMM_FORMAT_I2S,
+  //   .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
+  //   .dma_buf_count = 8,
+  //   .dma_buf_len = 64,
+  //   .use_apll = false,
+  //   .tx_desc_auto_clear = true,
+  //   .fixed_mclk = 0
+  // };
+  // i2s_config_t i2s_config = {
+  //   mode : (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX),
+  //   sample_rate : I2S_SampleRate,
+  //   bits_per_sample : I2S_BITS_PER_SAMPLE_32BIT,
+  //   channel_format : I2S_CHANNEL_FMT_ONLY_LEFT,
+  //   communication_format : (i2s_comm_format_t)(I2S_COMM_FORMAT_I2S | I2S_COMM_FORMAT_I2S_LSB),
+  //   intr_alloc_flags : ESP_INTR_FLAG_LEVEL1,
+  //   dma_buf_count : 8,
+  //   dma_buf_len : 8
+  // };
+
   i2s_config_t i2s_config = {
     .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX),
     .sample_rate = SAMPLE_RATE,
@@ -125,6 +154,7 @@ void setupI2S() {
     .tx_desc_auto_clear = true,
     .fixed_mclk = 0
   };
+
   Serial.println("I2S config created");
 
   Serial.println("Configuring I2S pins...");
